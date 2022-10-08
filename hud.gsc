@@ -29,11 +29,17 @@ onPlayerSpawned()
     {
         self waittill("spawned_player");
         self thread health_bar_hud();
+		self thread bleedout_bar_hud();
     }
 }
 
 health_bar_hud()
 {
+
+	if (getDvarIntDefault("healthBar") != 1)
+	{
+		return;
+	}
     self endon("disconnect");
 
 	flag_wait( "initial_blackscreen_passed" );
@@ -115,6 +121,10 @@ health_bar_hud()
 
 enemy_counter_hud()
 {
+	if (getDvarIntDefault("enemyCounter") != 1)
+	{
+		return;
+	}
     enemy_counter_hud = newHudElem();
     enemy_counter_hud.alignx = "left";
     enemy_counter_hud.aligny = "top";
@@ -164,8 +174,12 @@ enemy_counter_hud()
 
 timer_hud()
 {
-    level thread round_timer_hud();
 
+    level thread round_timer_hud();
+	if (getDvarIntDefault("timer") != 1)
+	{
+		return;
+	}
     timer_hud = newHudElem();
 	timer_hud.alignx = "right";
 	timer_hud.aligny = "top";
@@ -200,6 +214,11 @@ round_timer_hud()
 		return;
 	}
 
+	if (getDvarIntDefault("roundTimer") != 1)
+	{
+		return;
+	}
+
 	round_timer_hud = newHudElem();
 	round_timer_hud.alignx = "right";
 	round_timer_hud.aligny = "top";
@@ -223,12 +242,6 @@ round_timer_hud()
 	flag_wait( "initial_blackscreen_passed" );
 
 	round_timer_hud.alpha = 1;
-
-	if ( getDvar( "g_gametype" ) == "zgrief" )
-	{
-		set_time_frozen(round_timer_hud, 0);
-	}
-
 	while (1)
 	{
 		round_timer_hud setTimerUp(0);
@@ -260,14 +273,8 @@ set_time_frozen_on_end_game(hud)
 
 set_time_frozen(hud, time)
 {
-	if ( getDvar( "g_gametype" ) == "zgrief" )
-	{
-		level endon( "restart_round_start" );
-	}
-	else
-	{
-		level endon( "start_of_round" );
-	}
+
+	level endon( "start_of_round" );
 
 	if(time != 0)
 	{
@@ -286,6 +293,86 @@ set_time_frozen(hud, time)
 		}
 
 		wait 0.5;
+	}
+}
+
+
+
+
+bleedout_bar_hud()
+{
+	self endon("disconnect");
+
+	flag_wait( "initial_blackscreen_passed" );
+
+	if(flag("solo_game"))
+	{
+		return;
+	}
+	if (getDvarIntDefault("bleedOut") != 1)
+	{
+		return;
+	}
+	bleedout_bar = self createbar((1, 0, 0), level.secondaryprogressbarwidth * 2, level.secondaryprogressbarheight);
+	bleedout_bar setpoint("CENTER", undefined, level.secondaryprogressbarx, -1 * level.secondaryprogressbary);
+	bleedout_bar.hidewheninmenu = 1;
+	bleedout_bar.bar.hidewheninmenu = 1;
+	bleedout_bar.barframe.hidewheninmenu = 1;
+	bleedout_bar hideelem();
+
+	while (1)
+	{
+		self waittill("entering_last_stand");
+
+		if(!self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+		{
+			continue;
+		}
+
+		self thread bleedout_bar_hud_updatebar(bleedout_bar);
+
+		bleedout_bar showelem();
+
+		self waittill_any("player_revived", "bled_out", "player_suicide");
+
+		bleedout_bar hideelem();
+	}
+}
+
+bleedout_bar_hud_updatebar(bleedout_bar)
+{
+	self endon("player_revived");
+	self endon("bled_out");
+	self endon("player_suicide");
+
+	bleedout_time = getDvarInt("player_lastStandBleedoutTime");
+	interval_time = 30;
+	interval_frac = interval_time / bleedout_time;
+	num_intervals = int(bleedout_time / interval_time) + 1;
+
+	bleedout_bar updatebar(1);
+
+	for(i = 0; i < num_intervals; i++)
+	{
+		time = bleedout_time;
+		if(time > interval_time)
+		{
+			time = interval_time;
+		}
+
+		frac = 0.99 - ((i + 1) * interval_frac);
+
+		barwidth = int((bleedout_bar.width * frac) + 0.5);
+		if(barwidth < 1)
+		{
+			barwidth = 1;
+		}
+
+		bleedout_bar.bar scaleovertime(time, barwidth, bleedout_bar.height);
+
+		wait time;
+
+		bleedout_time -= time;
 	}
 }
 
