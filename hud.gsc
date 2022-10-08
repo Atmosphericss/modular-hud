@@ -13,10 +13,10 @@ init()
 
 onPlayerConnect()
 {
-    for(;;)
+    for (;;)
     {
-    levelwaittill("connecting", player);
-    player thread onPlayerSpawned();
+        level waittill("connecting", player);
+        player thread onPlayerSpawned();
     }
 }
 
