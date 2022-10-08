@@ -3,7 +3,7 @@
 #include maps\mp\zombies\_zm_utility;
 #include maps\mp\gametypes_zm\_hud_util;
 
-init()health_bar_hud()
+init()
 
 {
     level thread enemy_counter_hud();
